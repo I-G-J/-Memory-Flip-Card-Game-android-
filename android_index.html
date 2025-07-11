@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Flip Card Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from {
+        text-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff;
+      }
+      to {
+        text-shadow: 0 0 20px #00ffe0, 0 0 40px #00ffe0;
+      }
+    }
+
+    .btn {
+      background: transparent;
+      color: white;
+      border: 2px solid #00eaff;
+      padding: 10px 25px;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      background: rgba(0, 255, 255, 0.2);
+      box-shadow: 0 0 15px #00ffe0, 0 0 30px #00ffe0;
+      transform: scale(1.1);
+    }
+
+    .btn.selected {
+      background: rgba(0, 255, 255, 0.3);
+      box-shadow: 0 0 20px #00ffe0;
+    }
+
+    .start-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      animation: fadeIn 2s ease forwards;
+      padding: 20px;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 30px 20px;
+      max-width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      background-color: #2e2e3a;
+      gap: 10px;
+    }
+
+    @media(min-width: 600px) {
+      .header {
+        flex-direction: row;
+        justify-content: space-around;
+      }
+    }
+
+    .game-board {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      justify-content: center;
+      padding: 20px;
+      transition: filter 0.5s;
+    }
+
+    .card {
+      width: 100%;
+      aspect-ratio: 1/1;
+      perspective: 1000px;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-front {
+      background-color: #444;
+      color: white;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+      background-color: white;
+    }
+
+    .card-back img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    .matched {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: white;
+      font-size: 1.5rem;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      flex-direction: column;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .blur {
+      filter: blur(6px);
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .volume-control input[type="range"] {
+      width: 80px;
+      -webkit-appearance: none;
+      height: 8px;
+      background: #00eaff;
+      border-radius: 5px;
+      outline: none;
+      opacity: 0.7;
+      transition: opacity .2s;
+    }
+
+    .volume-control input[type="range"]:hover {
+      opacity: 1;
+    }
+
+    .volume-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ffe0;
+      cursor: pointer;
+    }
+
+    .volume-control input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ffe0;
+      cursor: pointer;
+    }
+
+    .volume-icon {
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 600px) {
+      .btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      .card-front, .card-back {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+
+  <div class="start-screen" id="startScreen">
+    <h1>🧠 Memory Flip Card Game</h1>
+    <div class="glass-panel">
+      <p><strong>Select Difficulty</strong></p>
+      <div>
+        <button class="btn" onclick="selectLevel('easy', this)">Easy (60s)</button>
+        <button class="btn" onclick="selectLevel('medium', this)">Medium (40s)</button>
+        <button class="btn" onclick="selectLevel('hard', this)">Hard (20s)</button>
+      </div>
+      <br>
+      <button class="btn" onclick="initGame()">Start Game</button>
+    </div>
+  </div>
+
+  <div class="header" id="header">
+    <h2>🧠 Memory Game</h2>
+    <div class="volume-control">
+        <span class="volume-icon" id="volumeIcon">🔊</span>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.3">
+    </div>
+    <div>
+      <span>Moves: <span id="moves">0</span></span> |
+      <span>Time Left: <span id="timer">0</span> sec</span>
+    </div>
+    <button class="btn" onclick="location.reload()">Reset</button>
+  </div>
+
+  <div class="game-board" id="gameBoard"></div>
+
+  <div class="overlay" id="winOverlay">
+    <p>🎉 You Won the Game!</p>
+    <p>Total Moves: <span id="finalMoves"></span></p>
+    <p>Time Taken: <span id="finalTime"></span> seconds</p>
+    <button class="btn" onclick="location.reload()">Play Again</button>
+  </div>
+
+  <div class="overlay" id="loseOverlay">
+    <p>💥 Time's Up!</p>
+    <p>You Lost the Game.</p>
+    <button class="btn" onclick="location.reload()">Try Again</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    const cardsArray = [
+      { name: "apple", img: "apple.jpg" },
+      { name: "banana", img: "banana.jpg" },
+      { name: "guava", img: "guava.png" },
+      { name: "orange", img: "orange.jpg" },
+      { name: "stawberry", img: "stawberry.jpg" }
+    ];
+
+    let selectedLevel = null;
+    let maxTime, timer, interval;
+    let moves = 0, matchedCount = 0;
+    let firstCard = null, secondCard = null, lockBoard = false;
+
+    const header = document.getElementById('header');
+    const gameBoard = document.getElementById('gameBoard');
+    const movesDisplay = document.getElementById('moves');
+    const timerDisplay = document.getElementById('timer');
+    const finalMoves = document.getElementById('finalMoves');
+    const finalTime = document.getElementById('finalTime');
+    const winOverlay = document.getElementById('winOverlay');
+    const loseOverlay = document.getElementById('loseOverlay');
+
+    // --- Sound Effects ---
+    const flipSound = new Audio('flip.wav');
+    const matchSound = new Audio('match.wav');
+    const noMatchSound = new Audio('no-match.wav');
+    const winSound = new Audio('win.wav');
+    const loseSound = new Audio('lose.wav');
+    const backgroundMusic = new Audio('background_music.wav');
+    backgroundMusic.loop = true; // Loop the background music
+    backgroundMusic.volume = 0.3; // Default volume for background music
+
+    // --- Volume Control Elements ---
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeIcon = document.getElementById('volumeIcon');
+    let isMuted = false;
+    let previousVolume = backgroundMusic.volume; // Store the last volume before muting
+
+    // Initialize individual sound effect volumes
+    function setAllSoundVolumes(volume) {
+        flipSound.volume = volume;
+        matchSound.volume = volume;
+        noMatchSound.volume = volume;
+        winSound.volume = volume;
+        loseSound.volume = volume;
+    }
+    setAllSoundVolumes(backgroundMusic.volume); // Set initial volumes based on background music
+
+    // Event listener for volume slider
+    volumeSlider.addEventListener('input', (e) => {
+        const volume = parseFloat(e.target.value);
+        backgroundMusic.volume = volume;
+        setAllSoundVolumes(volume); // Apply to all sound effects too
+        previousVolume = volume; // Update previous volume
+        updateVolumeIcon(volume);
+    });
+
+    // Event listener for volume icon (mute/unmute)
+    volumeIcon.addEventListener('click', () => {
+        if (isMuted) {
+            // Unmute
+            backgroundMusic.volume = previousVolume > 0 ? previousVolume : 0.3; // Restore previous or default
+            setAllSoundVolumes(previousVolume > 0 ? previousVolume : 0.3);
+            volumeSlider.value = backgroundMusic.volume;
+            isMuted = false;
+            updateVolumeIcon(backgroundMusic.volume);
+        } else {
+            // Mute
+            previousVolume = backgroundMusic.volume; // Save current volume
+            backgroundMusic.volume = 0;
+            setAllSoundVolumes(0);
+            volumeSlider.value = 0;
+            isMuted = true;
+            updateVolumeIcon(0);
+        }
+    });
+
+    // Function to update the volume icon based on volume level
+    function updateVolumeIcon(volume) {
+        if (volume === 0) {
+            volumeIcon.textContent = '🔇'; // Muted
+        } else if (volume < 0.5) {
+            volumeIcon.textContent = '🔉'; // Low volume
+        } else {
+            volumeIcon.textContent = '🔊'; // High volume
+        }
+    }
+    updateVolumeIcon(backgroundMusic.volume); // Set initial icon
+
+    function selectLevel(level, btn) {
+      selectedLevel = level;
+      document.querySelectorAll('.glass-panel .btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    function initGame() {
+      if (!selectedLevel) {
+        alert("Please select a difficulty level!");
+        return;
+      }
+
+      document.getElementById('startScreen').style.display = 'none';
+      header.style.display = 'flex';
+      gameBoard.style.display = 'grid';
+
+      maxTime = selectedLevel === 'easy' ? 60 : selectedLevel === 'medium' ? 40 : 20;
+      timer = maxTime;
+      moves = 0;
+      matchedCount = 0;
+      lockBoard = false;
+      firstCard = null;
+      secondCard = null;
+
+      movesDisplay.textContent = moves;
+      timerDisplay.textContent = timer;
+
+      const gameCards = [...cardsArray, ...cardsArray].sort(() => 0.5 - Math.random());
+      gameBoard.innerHTML = '';
+
+      // Play background music when game starts
+      backgroundMusic.play().catch(e => console.error("Error playing background music:", e));
+
+      gameCards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.dataset.name = card.name;
+        cardElement.innerHTML = `
+          <div class="card-inner">
+            <div class="card-front">?</div>
+            <div class="card-back"><img src="${card.img}" alt="${card.name}"></div>
+          </div>`;
+        gameBoard.appendChild(cardElement);
+
+        cardElement.addEventListener('click', () => {
+          if (lockBoard || cardElement.classList.contains('matched') || cardElement.querySelector('.card-inner').classList.contains('flipped')) return;
+          if (moves === 0 && timer === maxTime) startTimer();
+
+          cardElement.querySelector('.card-inner').classList.add('flipped');
+          flipSound.play(); // Play flip sound
+
+          if (!firstCard) {
+            firstCard = cardElement;
+            return;
+          }
+
+          secondCard = cardElement;
+          lockBoard = true;
+          moves++;
+          movesDisplay.textContent = moves;
+
+          const isMatch = firstCard.dataset.name === secondCard.dataset.name;
+
+          setTimeout(() => {
+            if (isMatch) {
+              firstCard.classList.add('matched');
+              secondCard.classList.add('matched');
+              matchedCount += 2;
+              matchSound.play(); // Play match sound
+            } else {
+              firstCard.querySelector('.card-inner').classList.remove('flipped');
+              secondCard.querySelector('.card-inner').classList.remove('flipped');
+              noMatchSound.play(); // Play no-match sound
+            }
+
+            firstCard = null;
+            secondCard = null;
+            lockBoard = false;
+
+            if (matchedCount === gameCards.length) {
+              stopTimer();
+              backgroundMusic.pause(); // Stop background music
+              winSound.play(); // Play win sound
+              finalMoves.textContent = moves;
+              finalTime.textContent = maxTime - timer;
+              gameBoard.classList.add('blur');
+              header.classList.add('blur');
+              winOverlay.style.display = 'flex';
+
+              confetti({
+                particleCount: 200,
+                spread: 100,
+                origin: { y: 0.6 }
+              });
+            }
+          }, 800);
+        });
+      });
+    }
+
+    function startTimer() {
+      interval = setInterval(() => {
+        timer--;
+        timerDisplay.textContent = timer;
+        if (timer <= 0) {
+          clearInterval(interval);
+          backgroundMusic.pause(); // Stop background music
+          loseSound.play(); // Play lose sound
+          gameBoard.classList.add('blur');
+          header.classList.add('blur');
+          loseOverlay.style.display = 'flex';
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(interval);
+    }
+
+    
+  </script>
+</body>
+</html>
